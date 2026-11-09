@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>À chaque métier son bac technologique !</title>
+<style>
+:root{color-scheme:light;--ink:#202938;--muted:#657184;--line:#dce2ea;--panel:#f5f7fa;--accent:#315fba;--good:#16834b;--bad:#bd443d}
+*{box-sizing:border-box}body{margin:0;background:#eef2f7;color:var(--ink);font:16px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:900px;margin:28px auto;padding:0 16px 40px}.card{background:white;border:1px solid var(--line);border-radius:14px;padding:18px;margin:14px 0;box-shadow:0 2px 8px #1b2c4510}
+h1{font-size:clamp(1.6rem,4vw,2.3rem);margin:8px 0}h2{font-size:1.12rem;margin:0 0 12px}.muted{color:var(--muted);font-size:.88rem}.tag{display:inline-block;border:1px solid var(--line);border-radius:20px;padding:3px 9px;font-size:.75rem;color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}.stat{background:var(--panel);border-radius:10px;padding:12px;text-align:center}.stat strong{display:block;font-size:1.55rem}
+button,select,input{font:inherit;border:1px solid var(--line);border-radius:9px;padding:10px;background:white;color:var(--ink);min-width:0;width:100%}
+button{cursor:pointer}button.primary{background:var(--accent);color:white;border-color:var(--accent)}button:disabled{opacity:.45;cursor:not-allowed}
+label{display:block;font-size:.84rem;font-weight:600;margin-bottom:5px}
+.progress{height:8px;background:var(--line);border-radius:10px;overflow:hidden;margin-top:14px}.progress span{display:block;height:100%;background:var(--accent);width:0}
+.job{border:1px solid var(--line);border-radius:11px;padding:16px;margin-top:10px}
+.job h3{font-size:1.25rem;margin:0 0 6px}.job p{margin:0;color:var(--muted);font-size:.92rem}.job .meta{margin-top:10px}
+.feedback{border-radius:10px;padding:12px;margin-top:14px;font-size:.95rem}
+.feedback.good{background:#e8f5ee;color:var(--good)}.feedback.bad{background:#fbeceb;color:var(--bad)}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.bac-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.bac{background:var(--panel);padding:11px;border-radius:9px}.bac b{display:block}
+footer{font-size:.85rem;color:var(--muted);line-height:1.55}
+@media(max-width:650px){main{margin:12px auto}.stats{grid-template-columns:repeat(2,1fr)}.actions{grid-template-columns:1fr}.bac-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<header class="card">
+<span class="tag">JEU D'ORIENTATION • 100 MÉTIERS</span>
+<h1>À chaque métier son bac technologique !</h1>
+<p class="muted">Un métier est tiré au hasard : choisis dans le menu déroulant le bac technologique qui y mène le plus logiquement, puis valide ta réponse. Les intitulés sont proposés au masculin et au féminin lorsque les formes diffèrent.</p>
+<div class="stats">
+<div class="stat"><strong id="score">0</strong><span class="muted">Bonnes réponses</span></div>
+<div class="stat"><strong id="done">0</strong><span class="muted">Tentatives</span></div>
+<div class="stat"><strong id="seen">0</strong><span class="muted">Métiers tirés</span></div>
+<div class="stat"><strong>8</strong><span class="muted">Bacs</span></div>
+</div><div class="progress"><span id="progress"></span></div>
+</header>
+<section class="card">
+<h2>À toi de jouer !</h2>
+<p class="muted" id="remaining"></p>
+<div id="job"></div>
+<div class="actions">
+<button class="primary" id="validate">Valider ma réponse</button>
+<button id="next">Métier suivant →</button>
+</div>
+<div id="feedback" aria-live="polite"></div>
+<div style="margin-top:14px"><button id="reset">Recommencer une partie</button></div>
+</section>
+<section class="card"><h2>Les 8 bacs technologiques</h2><div class="bac-grid" id="bac-info"></div></section>
+<section class="card"><h2>À retenir pour l'orientation</h2>
+<footer>Un bac technologique prépare principalement à une poursuite d'études : BTS, BUT, licence, master, école spécialisée ou école d'ingénieurs. Les métiers présentés ne sont généralement pas accessibles directement après le bac. Les associations indiquent des parcours possibles ou cohérents, et non des voies exclusives : un même métier peut être accessible par plusieurs formations et plusieurs séries. Les métiers réglementés (par exemple avocat, sage-femme ou certaines professions de santé) exigent des diplômes et parcours spécifiques. Les perspectives d'emploi et de rémunération varient selon les régions, les qualifications, l'expérience et les secteurs.</footer>
+</section>
+</main>
+<script>
+const bacs=[
+["STMG","Sciences et technologies du management et de la gestion","Management, gestion, droit, économie"],
+["STI2D","Sciences et technologies de l'industrie et du développement durable","Industrie, ingénierie, numérique, énergie"],
+["STL","Sciences et technologies de laboratoire","Laboratoire, chimie, biologie, mesures"],
+["ST2S","Sciences et technologies de la santé et du social","Santé, social, accompagnement"],
+["STD2A","Sciences et technologies du design et des arts appliqués","Design, création, arts appliqués"],
+["STHR","Sciences et technologies de l'hôtellerie et de la restauration","Hôtellerie, restauration, tourisme"],
+["S2TMD","Sciences et techniques du théâtre, de la musique et de la danse","Musique, danse, théâtre"],
+["STAV","Sciences et technologies de l'agronomie et du vivant","Agronomie, vivant, environnement, alimentation"]
+];
+// Métier (masculin / féminin), bac, secteur, description, poursuite d'études indicative
+const raw = [
+["Comptable / Comptable","STMG","Finance","Gère les comptes et prépare les bilans.","BTS comptabilité, DCG"],
+["Contrôleur de gestion / Contrôleuse de gestion","STMG","Finance","Analyse les coûts et la performance d'une organisation.","BUT GEA, master"],
+["Auditeur financier / Auditrice financière","STMG","Finance","Vérifie les comptes et les procédures financières.","DCG, DSCG, master"],
+["Analyste financier / Analyste financière","STMG","Finance","Étudie les entreprises et les marchés financiers.","Master finance"],
+["Gestionnaire de patrimoine / Gestionnaire de patrimoine","STMG","Finance","Accompagne les clients dans leurs choix patrimoniaux.","Master gestion de patrimoine"],
+["Actuaire / Actuaire","STMG","Finance","Évalue les risques financiers et assurantiels grâce aux mathématiques.","Master actuariat"],
+["Conseiller bancaire / Conseillère bancaire","STMG","Finance","Accompagne les clients dans leurs projets financiers.","BTS banque, BUT"],
+["Gestionnaire de paie / Gestionnaire de paie","STMG","Ressources humaines","Prépare les rémunérations et les déclarations sociales.","BTS, BUT, licence"],
+["Responsable des ressources humaines / Responsable des ressources humaines","STMG","Ressources humaines","Pilote les recrutements et la politique sociale.","Master RH"],
+["Juriste d'entreprise / Juriste d'entreprise","STMG","Juridique","Sécurise les contrats et les décisions d'une entreprise.","Master en droit"],
+["Juriste en droit social / Juriste en droit social","STMG","Juridique","Est spécialiste du droit du travail et des relations sociales.","Master droit social"],
+["Chargé de conformité / Chargée de conformité","STMG","Juridique et finance","Vérifie le respect des règles et réglementations.","Master droit, finance"],
+["Acheteur / Acheteuse","STMG","Commerce","Négocie les achats de biens et de services.","BUT, école de commerce"],
+["Ingénieur en énergies renouvelables / Ingénieure en énergies renouvelables","STI2D","Ingénierie","Conçoit des solutions de production énergétique.","BUT, école d'ingénieurs"],
+["Ingénieur en robotique / Ingénieure en robotique","STI2D","Ingénierie","Développe des systèmes automatisés et des robots.","BUT, école d'ingénieurs"],
+["Ingénieur en cybersécurité / Ingénieure en cybersécurité","STI2D","Numérique","Protège les systèmes informatiques.","BUT informatique, école d'ingénieurs"],
+["Architecte systèmes / Architecte systèmes","STI2D","Numérique","Conçoit l'organisation technique des systèmes informatiques.","École d'ingénieurs, master"],
+["Technicien en domotique / Technicienne en domotique","STI2D","Bâtiment","Développe les bâtiments intelligents.","BTS, BUT"],
+["Ingénieur en matériaux / Ingénieure en matériaux","STI2D","Industrie","Met au point de nouveaux matériaux.","École d'ingénieurs"],
+["Technicien en efficacité énergétique / Technicienne en efficacité énergétique","STI2D","Énergie","Améliore la performance énergétique des bâtiments.","BTS, BUT"],
+["Ingénieur en aéronautique / Ingénieure en aéronautique","STI2D","Industrie","Participe à la conception des aéronefs.","École d'ingénieurs"],
+["Technicien de maintenance industrielle / Technicienne de maintenance industrielle","STI2D","Industrie","Assure le fonctionnement des équipements industriels.","BTS, BUT"],
+["Dessinateur-projeteur / Dessinatrice-projeteuse","STI2D","Industrie","Réalise les plans techniques de produits ou d'installations.","BTS, BUT"],
+["Ingénieur en électronique / Ingénieure en électronique","STI2D","Électronique","Conçoit des circuits et des équipements électroniques.","École d'ingénieurs"],
+["Chef de projet industriel / Cheffe de projet industriel","STI2D","Industrie","Coordonne la réalisation de projets techniques.","BUT, école d'ingénieurs"],
+["Technicien des réseaux électriques / Technicienne des réseaux électriques","STI2D","Énergie","Participe au déploiement et à la maintenance des réseaux.","BTS, BUT"],
+["Ingénieur en informatique embarquée / Ingénieure en informatique embarquée","STI2D","Numérique","Développe des logiciels intégrés aux objets et aux machines.","École d'ingénieurs"],
+["Technicien de laboratoire médical / Technicienne de laboratoire médical","STL","Biologie","Réalise des analyses biologiques en laboratoire.","BTS, BUT ou diplôme adapté"],
+["Ingénieur en biotechnologies / Ingénieure en biotechnologies","STL","Biologie","Développe des applications utilisant le vivant.","École d'ingénieurs, master"],
+["Technicien en analyses chimiques / Technicienne en analyses chimiques","STL","Chimie","Analyse la composition de produits et de substances.","BTS, BUT"],
+["Ingénieur chimiste / Ingénieure chimiste","STL","Chimie","Conçoit des procédés et des produits chimiques.","École d'ingénieurs"],
+["Technicien contrôle qualité / Technicienne contrôle qualité","STL","Industrie","Vérifie la conformité des produits.","BTS, BUT"],
+["Ingénieur en formulation cosmétique / Ingénieure en formulation cosmétique","STL","Cosmétique","Élabore des produits de beauté et de soin.","Master, école d'ingénieurs"],
+["Technicien en toxicologie / Technicienne en toxicologie","STL","Santé","Étudie les effets des substances sur les organismes.","BTS, licence, master"],
+["Bio-informaticien / Bio-informaticienne","STL","Biologie et numérique","Analyse des données biologiques par informatique.","Master, école d'ingénieurs"],
+["Ingénieur en génie des procédés / Ingénieure en génie des procédés","STL","Industrie","Optimise les procédés de fabrication.","École d'ingénieurs"],
+["Technicien en microbiologie / Technicienne en microbiologie","STL","Biologie","Étudie les micro-organismes.","BTS, BUT"],
+["Responsable de laboratoire / Responsable de laboratoire","STL","Sciences","Organise les activités d'un laboratoire.","Master, expérience"],
+["Technicien en métrologie / Technicienne en métrologie","STL","Mesures","Contrôle la précision des instruments de mesure.","BTS, BUT"],
+["Ingénieur en recherche pharmaceutique / Ingénieure en recherche pharmaceutique","STL","Santé","Participe au développement de médicaments.","Master, école d'ingénieurs"],
+["Technicien en analyses environnementales / Technicienne en analyses environnementales","STL","Environnement","Analyse l'eau, l'air et les sols.","BTS, BUT"],
+["Infirmier / Infirmière","ST2S","Santé","Dispense des soins et accompagne les patients.","Diplôme d'État en IFSI"],
+["Sage-femme / Maïeuticien","ST2S","Santé","Accompagne les grossesses et les naissances.","Études de maïeutique"],
+["Éducateur spécialisé / Éducatrice spécialisée","ST2S","Social","Accompagne des personnes en difficulté.","Diplôme d'État"],
+["Assistant social / Assistante sociale","ST2S","Social","Aide les personnes dans leurs démarches et leurs droits.","Diplôme d'État"],
+["Ergothérapeute / Ergothérapeute","ST2S","Santé","Aide à retrouver de l'autonomie au quotidien.","Diplôme d'État"],
+["Manipulateur en électroradiologie médicale / Manipulatrice en électroradiologie médicale","ST2S","Santé","Réalise des examens d'imagerie médicale.","DE ou DTS"],
+["Orthophoniste / Orthophoniste","ST2S","Santé","Prend en charge les troubles du langage et de la communication.","Certificat de capacité"],
+["Psychomotricien / Psychomotricienne","ST2S","Santé","Accompagne les troubles du développement psychomoteur.","Diplôme d'État"],
+["Conseiller en économie sociale et familiale / Conseillère en économie sociale et familiale","ST2S","Social","Aide à gérer le budget et la vie quotidienne.","BTS ESF, DE CESF"],
+["Coordinateur de parcours de santé / Coordinatrice de parcours de santé","ST2S","Santé","Organise l'accompagnement des patients.","Formations santé et social"],
+["Technicien de l'intervention sociale et familiale / Technicienne de l'intervention sociale et familiale","ST2S","Social","Accompagne les familles dans leur quotidien.","Diplôme d'État"],
+["Cadre de santé / Cadre de santé","ST2S","Santé","Encadre une équipe soignante.","Expérience et formation cadre"],
+["Designer graphique / Designeuse graphique","STD2A","Design","Conçoit des identités visuelles et des supports de communication.","DN MADE, école de design"],
+["Architecte d'intérieur / Architecte d'intérieur","STD2A","Design","Aménage les espaces intérieurs.","DN MADE, école spécialisée"],
+["Designer UX/UI / Designeuse UX/UI","STD2A","Numérique et design","Conçoit des interfaces numériques faciles à utiliser.","DN MADE, master, école"],
+["Styliste / Styliste","STD2A","Mode","Imagine des collections de vêtements.","DN MADE, école de mode"],
+["Designer textile / Designeuse textile","STD2A","Mode","Crée des motifs et des matières textiles.","DN MADE"],
+["Scénographe / Scénographe","STD2A","Culture","Imagine les décors d'expositions et de spectacles.","DN MADE, master"],
+["Designer produit / Designeuse produit","STD2A","Industrie et design","Conçoit des objets et des produits.","DN MADE, école de design"],
+["Illustrateur / Illustratrice","STD2A","Arts","Crée des images pour l'édition et la communication.","DN MADE, école d'art"],
+["Directeur artistique / Directrice artistique","STD2A","Communication","Dirige la création visuelle d'une marque ou d'une campagne.","École de design, expérience"],
+["Designer d'espace / Designeuse d'espace","STD2A","Architecture","Conçoit des espaces commerciaux et culturels.","DN MADE, école spécialisée"],
+["Motion designer / Motion designeuse","STD2A","Numérique","Anime des créations graphiques et des vidéos.","DN MADE, école spécialisée"],
+["Restaurateur d'œuvres d'art / Restauratrice d'œuvres d'art","STD2A","Patrimoine","Conserve et restaure des objets et des œuvres.","École spécialisée, master"],
+["Directeur d'hôtel / Directrice d'hôtel","STHR","Hôtellerie","Dirige un établissement hôtelier.","BTS MHR, expérience"],
+["Chef cuisinier / Cheffe cuisinière","STHR","Restauration","Organise une cuisine et crée des menus.","BTS MHR, expérience"],
+["Responsable événementiel / Responsable événementielle","STHR","Tourisme","Organise des événements professionnels.","BTS, licence"],
+["Revenue manager / Revenue manager","STHR","Hôtellerie et économie","Optimise les tarifs et les réservations d'un hôtel.","BTS MHR, master"],
+["Responsable de réception / Responsable de réception","STHR","Hôtellerie","Coordonne l'accueil et les réservations.","BTS MHR"],
+["Sommelier / Sommelière","STHR","Restauration","Conseille les boissons et organise leur sélection.","Formation spécialisée, BTS"],
+["Chef pâtissier / Cheffe pâtissière","STHR","Restauration","Crée et réalise des pâtisseries.","CAP, BTM, BTS"],
+["Responsable de restauration collective / Responsable de restauration collective","STHR","Restauration","Gère la production et le service des repas.","BTS MHR"],
+["Responsable de tourisme / Responsable de tourisme","STHR","Tourisme","Développe des offres et des services touristiques.","BTS tourisme, licence"],
+["Consultant en expérience client hôtelière / Consultante en expérience client hôtelière","STHR","Hôtellerie","Améliore la qualité du séjour et du service.","BTS, licence, master"],
+["Maître d'hôtel / Maîtresse d'hôtel","STHR","Restauration","Coordonne le service en salle.","BTS MHR, expérience"],
+["Organisateur de réceptions / Organisatrice de réceptions","STHR","Événementiel","Prépare mariages, congrès et événements.","BTS, licence"],
+["Comédien / Comédienne","S2TMD","Théâtre","Interprète des rôles sur scène ou à l'écran.","Conservatoire, école"],
+["Danseur professionnel / Danseuse professionnelle","S2TMD","Danse","Interprète des œuvres chorégraphiques.","Conservatoire, formation"],
+["Musicien professionnel / Musicienne professionnelle","S2TMD","Musique","Interprète ou crée des œuvres musicales.","Conservatoire, école"],
+["Compositeur / Compositrice","S2TMD","Musique","Écrit des œuvres musicales.","Conservatoire, études musicales"],
+["Chef d'orchestre / Cheffe d'orchestre","S2TMD","Musique","Dirige un ensemble musical.","Conservatoire supérieur"],
+["Régisseur de spectacle / Régisseuse de spectacle","S2TMD","Spectacle","Organise les aspects techniques d'un spectacle.","BTS, formation spécialisée"],
+["Professeur de danse / Professeure de danse","S2TMD","Danse","Enseigne la pratique de la danse.","Diplôme d'État selon discipline"],
+["Professeur de musique / Professeure de musique","S2TMD","Musique","Enseigne la musique et la pratique instrumentale.","DE, concours selon poste"],
+["Chargé de production culturelle / Chargée de production culturelle","S2TMD","Culture","Organise la réalisation de projets artistiques.","Licence, master"],
+["Technicien du son / Technicienne du son","S2TMD","Spectacle","Assure la sonorisation et l'enregistrement.","BTS, école spécialisée"],
+["Médiateur culturel / Médiatrice culturelle","S2TMD","Culture","Facilite la rencontre entre le public et les œuvres.","Licence, master"],
+["Chorégraphe / Chorégraphe","S2TMD","Danse","Imagine et compose des spectacles de danse.","Formation artistique, expérience"],
+["Ingénieur agronome / Ingénieure agronome","STAV","Agronomie","Améliore les systèmes agricoles et alimentaires.","École d'ingénieurs"],
+["Conseiller agricole / Conseillère agricole","STAV","Agriculture","Accompagne les exploitations agricoles.","BTSA, licence"],
+["Technicien forestier / Technicienne forestière","STAV","Environnement","Gère et protège les espaces forestiers.","BTSA, concours selon poste"],
+["Ingénieur environnement / Ingénieure environnement","STAV","Environnement","Évalue et réduit les impacts environnementaux.","École d'ingénieurs, master"],
+["Responsable qualité agroalimentaire / Responsable qualité agroalimentaire","STAV","Agroalimentaire","Garantit la qualité et la sécurité des aliments.","BTSA, BUT, master"],
+["Chargé d'études en biodiversité / Chargée d'études en biodiversité","STAV","Environnement","Étudie et protège les espèces et les milieux naturels.","Licence, master"],
+["Technicien de gestion de l'eau / Technicienne de gestion de l'eau","STAV","Environnement","Surveille les ressources et les installations hydrauliques.","BTSA, BTS"],
+["Paysagiste concepteur / Paysagiste conceptrice","STAV","Aménagement","Imagine des espaces paysagers.","École de paysage"],
+["Technicien en agriculture de précision / Technicienne en agriculture de précision","STAV","Agriculture et numérique","Utilise les données et technologies pour piloter les cultures.","BTSA, licence"],
+["Responsable d'exploitation agricole / Responsable d'exploitation agricole","STAV","Agriculture","Gère une exploitation et son activité économique.","BTSA, expérience"],
+["Technicien en valorisation des déchets / Technicienne en valorisation des déchets","STAV","Environnement","Développe le tri et le recyclage des ressources.","BTSA, BUT"],
+["Conseiller en transition écologique / Conseillère en transition écologique","STAV","Environnement","Accompagne les organisations dans leurs changements écologiques.","Licence, master"]
+];
+const jobs=raw.map((r,i)=>({id:i,name:r[0],bac:r[1],sector:r[2],desc:r[3],study:r[4]}));
+const $=id=>document.getElementById(id);
+$("bac-info").innerHTML=bacs.map(b=>`<div class="bac"><b>${b[0]}</b><span class="muted">${b[1]}<br>${b[2]}</span></div>`).join("");
+let deck=[],current=null,attempts=0,correct=0,answered=false;
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function draw(){
+  if(deck.length===0){deck=shuffle(jobs.slice())}
+  current=deck.pop();
+  answered=false;
+  $("feedback").innerHTML="";
+  $("remaining").textContent=deck.length+" métier(s) encore à tirer sur "+jobs.length+".";
+  $("job").innerHTML=`<article class="job"><h3>${current.name}</h3><p><b>${current.sector}</b> · ${current.desc}</p><div class="meta"><span class="tag">Quel bac technologique mène vers ce métier ?</span></div><div style="margin-top:14px"><label for="answer">Bac technologique</label><select id="answer"><option value="">Choisir un bac…</option>${bacs.map(b=>`<option value="${b[0]}">${b[0]} — ${b[1]}</option>`).join("")}</select></div></article>`;
+  $("validate").disabled=false;$("next").disabled=true;
+  updateStats();
+}
+function updateStats(){$("score").textContent=correct;$("done").textContent=attempts;$("seen").textContent=jobs.length-deck.length;$("progress").style.width=((jobs.length-deck.length)/jobs.length*100)+"%"}
+$("validate").onclick=()=>{
+  if(answered)return;
+  const v=$("answer").value;
+  if(!v){$("feedback").innerHTML='<p class="muted">Choisis d&#39;abord un bac dans le menu déroulant.</p>';return}
+  answered=true;attempts++;
+  const ok=v===current.bac;if(ok)correct++;
+  const bacTitle=bacs.find(b=>b[0]===current.bac)[1];
+  $("feedback").innerHTML=`<div class="feedback ${ok?"good":"bad"}"><b>${ok?"✓ Bonne réponse, bravo !":"✕ Pas tout à fait…"}</b><p>${ok?"":"Réponse attendue : <b>"+current.bac+"</b> ("+bacTitle+")."} Études indicatives : ${current.study}</p></div>`;
+  $("validate").disabled=true;$("next").disabled=false;
+  updateStats();
+};
+$("next").onclick=()=>draw();
+$("reset").onclick=()=>{deck=[];attempts=0;correct=0;draw()};
+draw();
+</script>
+</body></html>
